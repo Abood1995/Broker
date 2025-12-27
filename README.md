@@ -43,7 +43,7 @@ A comprehensive desktop application for stock market analysis and investment rec
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/broker.git
+   git clone https://github.com/Abood1995/Broker.git
    cd broker
    ```
 

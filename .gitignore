@@ -34,8 +34,6 @@ ENV/
 *~
 .DS_Store
 
-# Configuration files with sensitive data
-config.py
 
 # Logs
 *.log
