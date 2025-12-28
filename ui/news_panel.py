@@ -3,10 +3,8 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext
 from typing import List
 from services.news_fetcher import NewsArticle
-from ui.constants import (
-    BACKGROUND_COLOR, FONT_LABEL, FONT_LABEL_BOLD, COLOR_TEXT_PRIMARY,
-    COLOR_POSITIVE, COLOR_NEGATIVE, COLOR_NEUTRAL, PADDING_WIDGET, CARD_PADDING
-)
+from ui import constants
+from ui.theme_manager import get_theme_manager
 import webbrowser
 
 class NewsPanel(tk.Frame):
@@ -14,32 +12,37 @@ class NewsPanel(tk.Frame):
     
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        self.configure(bg=BACKGROUND_COLOR)
+        self.theme_manager = get_theme_manager()
+        bg = self.theme_manager.get_background()
+        self.configure(bg=bg)
         self.articles = []
         self.create_widgets()
     
     def create_widgets(self):
         """Create news panel widgets"""
+        bg = self.theme_manager.get_background()
+        text_primary = self.theme_manager.get_text_primary()
+        
         # Header frame with title and refresh button
-        header_frame = tk.Frame(self, bg=BACKGROUND_COLOR)
-        header_frame.pack(fill=tk.X, pady=PADDING_WIDGET)
+        header_frame = tk.Frame(self, bg=bg)
+        header_frame.pack(fill=tk.X, pady=constants.PADDING_WIDGET)
         
         header = tk.Label(
             header_frame,
-            text="Recent News Articles",
-            font=("Arial", 14, "bold"),
-            bg=BACKGROUND_COLOR,
-            fg=COLOR_TEXT_PRIMARY
+            text=f"{constants.ICON_NEWS} Recent News Articles",
+            font=constants.FONT_H4,
+            bg=bg,
+            fg=text_primary
         )
-        header.pack(side=tk.LEFT, padx=PADDING_WIDGET)
+        header.pack(side=tk.LEFT, padx=constants.PADDING_WIDGET)
         
         # Scrollable frame for articles
-        canvas_frame = tk.Frame(self, bg=BACKGROUND_COLOR)
+        canvas_frame = tk.Frame(self, bg=bg)
         canvas_frame.pack(fill=tk.BOTH, expand=True)
         
-        canvas = tk.Canvas(canvas_frame, bg=BACKGROUND_COLOR, highlightthickness=0)
+        canvas = tk.Canvas(canvas_frame, bg=bg, highlightthickness=0)
         scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg=BACKGROUND_COLOR)
+        scrollable_frame = tk.Frame(canvas, bg=bg)
         
         scrollable_frame.bind(
             "<Configure>",
@@ -74,15 +77,17 @@ class NewsPanel(tk.Frame):
             widget.destroy()
         
         if not self.articles or len(self.articles) == 0:
+            bg = self.theme_manager.get_background()
+            text_secondary = self.theme_manager.get_text_secondary()
             no_news_label = tk.Label(
                 self.scrollable_frame,
                 text="No news articles available for this stock.\n\nArticles may not have been fetched during analysis.\nTry analyzing the stock again.",
-                font=FONT_LABEL,
-                bg=BACKGROUND_COLOR,
-                fg=COLOR_NEUTRAL,
+                font=constants.FONT_BODY,
+                bg=bg,
+                fg=text_secondary,
                 justify=tk.CENTER
             )
-            no_news_label.pack(pady=20)
+            no_news_label.pack(pady=constants.SPACE_XL)
             self.scrollable_frame.update_idletasks()
             self.canvas.update_idletasks()
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -112,14 +117,22 @@ class NewsPanel(tk.Frame):
         print(f"NewsPanel.display_articles: Finished displaying articles")
     
     def create_article_card(self, article: NewsArticle, index: int):
-        """Create a card for a single article"""
+        """Create a modern card for a single article"""
+        surface = self.theme_manager.get_surface()
+        border = self.theme_manager.get_border()
+        text_primary = self.theme_manager.get_text_primary()
+        text_secondary = self.theme_manager.get_text_secondary()
+        primary = self.theme_manager.get_primary()
+        
         card = tk.Frame(
             self.scrollable_frame,
-            bg="#ffffff",
-            relief=tk.RAISED,
-            bd=1
+            bg=surface,
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=border,
+            highlightthickness=1
         )
-        card.pack(fill=tk.X, padx=10, pady=5)
+        card.pack(fill=tk.X, padx=constants.SPACE_MD, pady=constants.SPACE_SM)
         
         # Store URL for click handlers (fix closure issue)
         article_url = article.url if article.url and article.url.strip() else None
@@ -137,12 +150,12 @@ class NewsPanel(tk.Frame):
             date_label = tk.Label(
                 card,
                 text=date_str,
-                font=("Arial", 9),
-                bg="#ffffff",
-                fg=COLOR_NEUTRAL,
+                font=constants.FONT_CAPTION,
+                bg=surface,
+                fg=text_secondary,
                 cursor="hand2" if article_url else "arrow"
             )
-            date_label.pack(anchor=tk.W, padx=CARD_PADDING, pady=(CARD_PADDING, 0))
+            date_label.pack(anchor=tk.W, padx=constants.CARD_PADDING, pady=(constants.CARD_PADDING, constants.SPACE_XS))
         
         # Create click handler function that captures the URL properly
         def create_click_handler(url):
@@ -162,17 +175,18 @@ class NewsPanel(tk.Frame):
         if not title_text or title_text.strip() == "":
             title_text = "Untitled Article"
         
+        title_color = primary if article_url else text_primary
         title_label = tk.Label(
             card,
             text=title_text,
-            font=("Arial", 11, "bold"),
-            bg="#ffffff",
-            fg="#0066cc" if article_url else COLOR_TEXT_PRIMARY,
+            font=constants.FONT_LABEL_BOLD,
+            bg=surface,
+            fg=title_color,
             wraplength=800,
             justify=tk.LEFT,
             cursor="hand2" if article_url else "arrow"
         )
-        title_label.pack(anchor=tk.W, padx=CARD_PADDING, pady=(2, 0))
+        title_label.pack(anchor=tk.W, padx=constants.CARD_PADDING, pady=(constants.SPACE_XS, 0))
         
         # Make entire card and all elements clickable if URL exists
         if article_url:
@@ -180,8 +194,9 @@ class NewsPanel(tk.Frame):
             
             # Bind click to title label
             title_label.bind("<Button-1>", click_handler)
-            title_label.bind("<Enter>", lambda e, lbl=title_label: lbl.config(fg="#0052a3", underline=True))
-            title_label.bind("<Leave>", lambda e, lbl=title_label: lbl.config(fg="#0066cc", underline=False))
+            primary_hover = constants.LIGHT_PRIMARY_HOVER if self.theme_manager.current_theme == constants.THEME_LIGHT else constants.DARK_PRIMARY_HOVER
+            title_label.bind("<Enter>", lambda e, lbl=title_label: lbl.config(fg=primary_hover, underline=True))
+            title_label.bind("<Leave>", lambda e, lbl=title_label: lbl.config(fg=title_color, underline=False))
             
             # Make entire card clickable
             card.bind("<Button-1>", click_handler)
@@ -190,16 +205,19 @@ class NewsPanel(tk.Frame):
             # Store click handler for binding to other elements
             card._click_handler = click_handler
         
-        # Source
+        # Source badge
+        source_frame = tk.Frame(card, bg=surface)
+        source_frame.pack(anchor=tk.W, padx=constants.CARD_PADDING, pady=(constants.SPACE_XS, 0))
+        
         source_label = tk.Label(
-            card,
-            text=f"Source: {article.source}",
-            font=("Arial", 9),
-            bg="#ffffff",
-            fg=COLOR_NEUTRAL,
+            source_frame,
+            text=f"📰 {article.source}",
+            font=constants.FONT_CAPTION,
+            bg=surface,
+            fg=text_secondary,
             cursor="hand2" if article_url else "arrow"
         )
-        source_label.pack(anchor=tk.W, padx=CARD_PADDING, pady=(2, 0))
+        source_label.pack(side=tk.LEFT)
         
         # Make source clickable if URL exists
         if article_url and hasattr(card, '_click_handler'):
@@ -211,29 +229,30 @@ class NewsPanel(tk.Frame):
             summary_label = tk.Label(
                 card,
                 text=summary_text,
-                font=("Arial", 10),
-                bg="#ffffff",
-                fg=COLOR_TEXT_PRIMARY,
+                font=constants.FONT_BODY,
+                bg=surface,
+                fg=text_primary,
                 wraplength=800,
                 justify=tk.LEFT,
                 cursor="hand2" if article_url else "arrow"
             )
-            summary_label.pack(anchor=tk.W, padx=CARD_PADDING, pady=(5, CARD_PADDING))
+            summary_label.pack(anchor=tk.W, padx=constants.CARD_PADDING, pady=(constants.SPACE_SM, constants.CARD_PADDING))
             
             # Make summary clickable if URL exists
             if article_url and hasattr(card, '_click_handler'):
                 summary_label.bind("<Button-1>", card._click_handler)
         else:
             # If no summary, add some padding
-            tk.Frame(card, height=5, bg="#ffffff").pack()
+            tk.Frame(card, height=constants.SPACE_XS, bg=surface).pack()
         
         # Add visual indicator for clickable articles
         if article_url:
+            hover_bg = self.theme_manager.get_background_secondary()
             # Add a subtle hover effect to the card
             def on_card_enter(e):
-                card.config(bg="#f5f5f5", relief=tk.SUNKEN)
+                card.config(bg=hover_bg, highlightbackground=primary)
             def on_card_leave(e):
-                card.config(bg="#ffffff", relief=tk.RAISED)
+                card.config(bg=surface, highlightbackground=border)
             
             card.bind("<Enter>", on_card_enter)
             card.bind("<Leave>", on_card_leave)
@@ -243,6 +262,6 @@ class NewsPanel(tk.Frame):
                 date_label.bind("<Button-1>", card._click_handler)
         
         # Separator
-        separator = tk.Frame(card, height=1, bg="#e0e0e0")
-        separator.pack(fill=tk.X, padx=CARD_PADDING, pady=(0, CARD_PADDING))
+        separator = tk.Frame(card, height=1, bg=border)
+        separator.pack(fill=tk.X, padx=constants.CARD_PADDING, pady=(0, constants.CARD_PADDING))
 

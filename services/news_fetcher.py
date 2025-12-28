@@ -446,6 +446,7 @@ class NewsFetcher:
         
         try:
             import feedparser
+            from urllib.parse import quote_plus
             
             # Multiple Google News queries for better coverage
             queries = [
@@ -454,7 +455,9 @@ class NewsFetcher:
             ]
             
             for query in queries:
-                url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+                # URL-encode the query parameter to handle spaces and special characters
+                encoded_query = quote_plus(query)
+                url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-US&gl=US&ceid=US:en"
                 
                 feed = feedparser.parse(url)
                 

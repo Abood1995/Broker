@@ -221,13 +221,27 @@ the JSON format is required and must be followed exactly."""
         try:
             from groq import Groq
             
+            # Groq has a request size limit, so truncate prompt if too large
+            # Limit to approximately 8000 characters to stay within limits
+            MAX_PROMPT_LENGTH = 8000
+            truncated_prompt = prompt
+            if len(prompt) > MAX_PROMPT_LENGTH:
+                # Try to truncate at article boundaries
+                truncated_prompt = prompt[:MAX_PROMPT_LENGTH]
+                # Find last article separator to avoid cutting in middle
+                last_separator = truncated_prompt.rfind("\n\n---\n\n")
+                if last_separator > MAX_PROMPT_LENGTH * 0.7:  # If separator is reasonably close
+                    truncated_prompt = prompt[:last_separator]
+                truncated_prompt += "\n\n[Note: Some articles were truncated due to size limits]"
+                print(f"⚠️  Groq: Truncated prompt from {len(prompt)} to {len(truncated_prompt)} characters")
+            
             client = Groq(api_key=self.groq_key)
             
             response = client.chat.completions.create(
                 model="llama-3.1-8b-instant",  # Free, fast model
                 messages=[
                     {"role": "system", "content": "You are a financial news analyst. Analyze stock news sentiment accurately."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": truncated_prompt}
                 ],
                 temperature=0.3,
                 max_tokens=500
@@ -249,6 +263,11 @@ the JSON format is required and must be followed exactly."""
         except ImportError:
             raise ImportError("Groq library not installed. Install with: pip install groq")
         except Exception as e:
+            error_str = str(e)
+            # Check if it's a 413 error (request too large)
+            if "413" in error_str or "too large" in error_str.lower():
+                print(f"⚠️  Groq: Request too large, skipping... (prompt was {len(prompt)} chars)")
+                raise Exception("Groq API error: Request too large - skipping")
             # Re-raise to trigger fallback to next provider
             raise Exception(f"Groq API error: {str(e)}")
     
